@@ -2,7 +2,10 @@ pipeline {
     agent any 
     
     environment {
-        iOS_Device='541BED44-E60D-498C-91D9-8E4F46186CC0'
+        iOS_Device = '541BED44-E60D-498C-91D9-8E4F46186CC0'
+        android1 = '25a4e830e41c7ece'
+        // ANDROID_HOME='/Users/jaylin/Library/Android/sdk'
+        // PATH='${ANDROID_HOME}/tools:${ANDROID_HOME}/platform-tools:$PATH'
     }
 
 
@@ -21,6 +24,18 @@ pipeline {
                     sh'''
                     xcrun simctl shutdown $iOS_Device
                     '''
+                }
+            }
+        }
+        stage('Android'){
+            parallel{
+                stage('espresso'){
+                    steps{
+                        sh'''
+                        source ~/.bash_profile
+                        adb -s $android1 shell am instrument -w -r   -e debug false -e class 'com.example.garycheng.myapplication.DemoTest' com.example.garycheng.myapplication.test/android.support.test.runner.AndroidJUnitRunner
+                        '''
+                    }
                 }
             }
         }
