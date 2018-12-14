@@ -53,29 +53,29 @@ pipeline {
                         sh 'adb install -r -g ~/Desktop/KKBOX.apk'
 
                         sh '''
-                        adb shell am start -n com.kkbox.sqa.recorder/.MainActivity -a android.intent.action.RUN -d START
-                        adb shell am instrument -w -e class com.kkbox.sqa.monkey.CalculatorTest#start com.kkbox.sqa.monkey.test/android.support.test.runner.AndroidJUnitRunner
+                        adb -e shell am start -n com.kkbox.sqa.recorder/.MainActivity -a android.intent.action.RUN -d START
+                        adb -e shell am instrument -w -e class com.kkbox.sqa.monkey.CalculatorTest#start com.kkbox.sqa.monkey.test/android.support.test.runner.AndroidJUnitRunner
                         '''
 
                         // run monkey
                         sh '''
-                        adb shell monkey -p com.skysoft.kkbox.android -v 5000 > output/monkey/monkey.log
+                        adb -e shell monkey -p com.skysoft.kkbox.android -v 5000 > output/monkey/monkey.log
                         sleep 10
                         '''
 
                         // screenshot
-                        sh 'adb shell screencap /sdcard/monkey.png'
+                        sh 'adb -e shell screencap /sdcard/monkey.png'
 
                         // stop recording
-                        sh 'adb shell am start -n com.kkbox.sqa.recorder/.MainActivity -a android.intent.action.RUN -d STOP'      
+                        sh 'adb -e shell am start -n com.kkbox.sqa.recorder/.MainActivity -a android.intent.action.RUN -d STOP'      
                     }
                     post {
                         always {
                             // collecting logs
                             sh '''
-                            adb bugreport > output/monkey/bugreport.log
-                            adb pull /sdcard/monkey.png output/monkey/monkey.png
-                            adb pull /sdcard/recorder.mp4 output/monkey/monkey.mp4
+                            adb -e bugreport > output/monkey/bugreport.log
+                            adb -e pull /sdcard/monkey.png output/monkey/monkey.png
+                            adb -e pull /sdcard/recorder.mp4 output/monkey/monkey.mp4
                             '''
 
                             // shutdown Android emulator
