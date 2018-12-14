@@ -37,7 +37,43 @@ pipeline {
                         '''
                     }
                 }
+                stage('monkey test'){
+                    steps{
+                        sh'''
+                        source ~/.bash_profile
+                        startEmulator()
+
+                        deleteDir()
+                        cd ~/Desktop/android-monkey-quick-start
+                        ls -al
+                        '''
+                    }
+                }
             }
         }
     }
+}
+
+def startEmulator() {
+    // reset Android Emulator
+    sh 'emulator -wipe-data @Nexus_4_API_23 &'
+
+    // wait for booting
+    sh '''
+    retry=0
+    while
+        retry=$((retry+1))
+        boot=`adb -e shell getprop init.svc.bootanim`
+        if test $? -eq 0 && test "$boot" == 'stopped\r' ; then
+            echo 'Emulator is ready'
+            break
+        fi
+        if test $retry -ge 90 ; then
+            echo 'Timeout (90 seconds) reached; failed to start emulator'
+            break
+        fi
+        # check interval: 1 sec
+        sleep 1
+    do :; done
+    '''
 }
