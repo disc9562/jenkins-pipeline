@@ -1,0 +1,28 @@
+pipeline {
+    agent any 
+    
+    environment {
+        iOS_Device='541BED44-E60D-498C-91D9-8E4F46186CC0'
+    }
+
+
+    stages {
+        stage('iOS') { 
+            steps {
+                sh '''
+                cd ~/Desktop/FoodTracker
+                xcrun simctl boot $iOS_Device
+                open /Applications/Xcode.app/Contents/Developer/Applications/Simulator.app
+                xcodebuild test -project FoodTracker.xcodeproj -scheme FoodTracker -destination 'platform=iOS Simulator,name=iPhone XR,OS=12.1'
+                '''
+            }
+            post{
+                always{
+                    sh'''
+                    xcrun simctl shutdown $iOS_Device
+                    '''
+                }
+            }
+        }
+    }
+}
