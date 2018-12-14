@@ -4,7 +4,9 @@ pipeline {
     environment {
         iOS_Device = '541BED44-E60D-498C-91D9-8E4F46186CC0'
         android1 = '25a4e830e41c7ece'
-        // ANDROID_HOME='/Users/jaylin/Library/Android/sdk'
+        ANDROID_HOME='/Users/jaylin/Library/Android/sdk'
+        PATH="${ANDROID_HOME}/emulator:${ANDROID_HOME}/platform-tools:$PATH"
+
         // PATH='${ANDROID_HOME}/tools:${ANDROID_HOME}/platform-tools:$PATH'
     }
 
@@ -39,13 +41,60 @@ pipeline {
                 }
                 stage('monkey test'){
                     steps{
-                        sh'''
-                        source ~/.bash_profile
                         startEmulator()
 
+                        sh'''
                         cd ~/Desktop/android-monkey-quick-start
-                        ls -al
+                        cd monkey-recorder && ./gradlew -q installDebug && cd -
+                        cd monkey-test && ./gradlew -q installDebug installDebugAndroidTest && cd -
                         '''
+
+                        sh 'mkdir -p output/monkey/'
+                        sh 'adb install -r -g ~/Desktop/KKBOX.apk'
+
+                        sh '''
+                        adb shell am start -n com.kkbox.sqa.recorder/.MainActivity -a android.intent.action.RUN -d START
+                        adb shell am instrument -w -e class com.kkbox.sqa.monkey.CalculatorTest#start com.kkbox.sqa.monkey.test/android.support.test.runner.AndroidJUnitRunner
+                        '''
+
+                        // run monkey
+                        sh '''
+                        adb shell monkey -p com.skysoft.kkbox.android -v 5000 > output/monkey/monkey.log
+                        sleep 10
+                        '''
+
+                        // screenshot
+                        sh 'adb shell screencap /sdcard/monkey.png'
+
+                        // stop recording
+                        sh 'adb shell am start -n com.kkbox.sqa.recorder/.MainActivity -a android.intent.action.RUN -d STOP'      
+                    }
+                    post {
+                        always {
+                            // collecting logs
+                            sh '''
+                            adb bugreport > output/monkey/bugreport.log
+                            adb pull /sdcard/monkey.png output/monkey/monkey.png
+                            adb pull /sdcard/recorder.mp4 output/monkey/monkey.mp4
+                            '''
+
+                            // shutdown Android emulator
+                            sh '''
+                            ps -A | grep emulator | awk '{print $1}' | xargs kill -9 || true
+                            '''
+
+                            // JUnit xml
+                            sh '''
+                            python3 monkey-to-junit.py output/monkey/monkey.log > output/monkey/monkey.xml
+                            '''
+
+                            junit "output/monkey/*.xml"
+                            // FIXME: https://issues.jenkins-ci.org/browse/JENKINS-40561
+                            // junit testDataPublishers: [[$class: 'TestDataPublisher']], testResults: 'output/monkey/monkey.xml'
+
+                            // archive
+                            dir('output/') { archiveArtifacts 'monkey/' }
+                        }
                     }
                 }
             }
