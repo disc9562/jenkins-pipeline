@@ -43,7 +43,6 @@ pipeline {
                         source ~/.bash_profile
                         startEmulator()
 
-                        deleteDir()
                         cd ~/Desktop/android-monkey-quick-start
                         ls -al
                         '''
