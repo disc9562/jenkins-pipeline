@@ -14,19 +14,28 @@ pipeline {
     stages {
         stage('iOS') { 
             steps {
+                deleteDir()
                 sh '''
                 cd ~/Desktop/FoodTracker
                 xcrun simctl boot $iOS_Device
                 open /Applications/Xcode.app/Contents/Developer/Applications/Simulator.app
-                
+                xcodebuild test -project FoodTracker.xcodeproj -scheme FoodTracker -destination 'platform=iOS Simulator,name=iPhone XR,OS=12.1' -configuration Debug -enableCodeCoverage YES 2>&1 | xcpretty -r junit
                 '''
-                //xcodebuild test -project FoodTracker.xcodeproj -scheme FoodTracker -destination 'platform=iOS Simulator,name=iPhone XR,OS=12.1'
+                //                xcodebuild test -project FoodTracker.xcodeproj -scheme FoodTracker -destination 'platform=iOS Simulator,name=iPhone XR,OS=12.1' -configuration Debug -enableCodeCoverage YES 2>&1 | ocunit2junit
+
+                //xcodebuild test -project FoodTracker.xcodeproj -scheme FoodTracker -destination 'platform=iOS Simulator,name=iPhone XR,OS=12.1' -configuration Debug -enableCodeCoverage YES 2>&1 | ocunit2junit
+            
+                //slather coverage --html --input-format profdata --binary-basename FoodTracker --scheme FoodTrackerUITests --workspace FoodTracker.xcworkspace --configuration Debug --ignore **View** --ignore **AppText** --output-directory reports FoodTracker.xcodeproj
             }
             post{
                 always{
                     sh'''
                     xcrun simctl shutdown $iOS_Device
+                    ls -al
+                    mv ~/Desktop/FoodTracker/build .
                     '''
+                
+                    junit "build/**/*.xml"
                 }
             }
         }
@@ -36,8 +45,13 @@ pipeline {
                     steps{
                         sh'''
                         source ~/.bash_profile
-                        adb -s $android1 shell am instrument -w -r   -e debug false -e class 'com.example.garycheng.myapplication.DemoTest' com.example.garycheng.myapplication.test/android.support.test.runner.AndroidJUnitRunner
+                        java -jar ~/Downloads/spoon-runner-1.7.1-jar-with-dependencies.jar -serial 25a4e830e41c7ece --apk ~/Desktop/DemoAppForEspresso/app/build/outputs/apk/debug/app-debug.apk --test-apk ~/Desktop/DemoAppForEspresso/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk --output outputs/espresso --no-animations --grant-all
                         '''
+                    }
+                    post{
+                        always{
+                            junit "outputs/**/*.xml"
+                        }   
                     }
                 }
                 stage('monkey test'){
@@ -61,7 +75,7 @@ pipeline {
                         // run monkey
                         sh '''
                         adb -e shell am instrument -w -e class com.kkbox.sqa.monkey.KKBOX#login com.kkbox.sqa.monkey.test/android.support.test.runner.AndroidJUnitRunner
-                        adb -e shell monkey -p com.skysoft.kkbox.android -v 5000 > output/monkey/monkey.log
+                        adb -e shell monkey -p com.skysoft.kkbox.android -v 1000 > output/monkey/monkey.log
                         sleep 10
                         '''
 
@@ -87,8 +101,6 @@ pipeline {
 
                             // JUnit xml
                             sh '''
-                            
-                            echo $PWD
                             python3 ~/Desktop/android-monkey-quick-start/monkey-to-junit.py output/monkey/monkey.log > output/monkey/monkey.xml
                             '''
 
@@ -109,6 +121,11 @@ pipeline {
                 cd ~/Desktop/webtest
                 npm run cypress
                 '''
+            }
+            post{
+                always{
+                     junit "output/cypress/*.xml"
+                }
             }
         }
     }
