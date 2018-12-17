@@ -103,6 +103,14 @@ pipeline {
                 }
             }
         }
+        stage('web'){
+            steps{
+                sh '''
+                cd ~/Desktop/webtest
+                npm run cypress
+                '''
+            }
+        }
     }
 }
 
