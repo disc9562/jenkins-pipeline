@@ -18,8 +18,9 @@ pipeline {
                 cd ~/Desktop/FoodTracker
                 xcrun simctl boot $iOS_Device
                 open /Applications/Xcode.app/Contents/Developer/Applications/Simulator.app
-                xcodebuild test -project FoodTracker.xcodeproj -scheme FoodTracker -destination 'platform=iOS Simulator,name=iPhone XR,OS=12.1'
+                
                 '''
+                //xcodebuild test -project FoodTracker.xcodeproj -scheme FoodTracker -destination 'platform=iOS Simulator,name=iPhone XR,OS=12.1'
             }
             post{
                 always{
@@ -59,6 +60,7 @@ pipeline {
 
                         // run monkey
                         sh '''
+                        adb -e shell am instrument -w -e class com.kkbox.sqa.monkey.KKBOX#login com.kkbox.sqa.monkey.test/android.support.test.runner.AndroidJUnitRunner
                         adb -e shell monkey -p com.skysoft.kkbox.android -v 5000 > output/monkey/monkey.log
                         sleep 10
                         '''
@@ -85,7 +87,9 @@ pipeline {
 
                             // JUnit xml
                             sh '''
-                            python3 monkey-to-junit.py output/monkey/monkey.log > output/monkey/monkey.xml
+                            
+                            echo $PWD
+                            python3 ~/Desktop/android-monkey-quick-start/monkey-to-junit.py output/monkey/monkey.log > output/monkey/monkey.xml
                             '''
 
                             junit "output/monkey/*.xml"
@@ -112,7 +116,7 @@ def startEmulator() {
     while
         retry=$((retry+1))
         boot=`adb -e shell getprop init.svc.bootanim`
-        if test $? -eq 0 && test "$boot" == 'stopped\r' ; then
+        if test $? -eq 0 && test "$boot" == 'stopped' ; then
             echo 'Emulator is ready'
             break
         fi
